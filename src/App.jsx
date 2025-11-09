@@ -23,11 +23,30 @@ function App() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [socket, setSocket] = useState(null);
 
+    const resolveSocketUrl = () => {
+        if (import.meta.env.VITE_SOCKET_URL) {
+            return import.meta.env.VITE_SOCKET_URL;
+        }
+
+        if (import.meta.env.VITE_API_BASE_URL) {
+            // Remove trailing /api if present and swap protocol for websockets
+            const base = import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '');
+            return base.replace(/^http/i, (match) => match === 'https' ? 'wss' : 'ws');
+        }
+
+        if (typeof window !== 'undefined' && import.meta.env.PROD) {
+            return window.location.origin.replace(/^http/i, (match) => match === 'https' ? 'wss' : 'ws');
+        }
+
+        return 'http://localhost:5000';
+    };
+
     useEffect(() => {
-        // Initialize socket connection
-        const newSocket = io(process.env.NODE_ENV === 'production'
-            ? 'wss://your-production-domain.com'
-            : 'http://localhost:5000');
+        const socketUrl = resolveSocketUrl();
+        const newSocket = io(socketUrl, {
+            withCredentials: true,
+            transports: ['websocket', 'polling']
+        });
 
         setSocket(newSocket);
 

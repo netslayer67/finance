@@ -12,10 +12,16 @@ export const useApi = () => {
     return context;
 };
 
+const normaliseBaseUrl = () => {
+    if (import.meta.env.VITE_API_BASE_URL) {
+        return import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '');
+    }
+    // When running through Vite dev proxy we keep it relative
+    return '/api';
+};
+
 const api = axios.create({
-    baseURL: import.meta.env.PROD
-        ? 'https://your-production-api.com/api'
-        : '/api',
+    baseURL: normaliseBaseUrl(),
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
