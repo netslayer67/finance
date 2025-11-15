@@ -191,6 +191,14 @@ const Reports = () => {
             }
 
             setReportData(response.data);
+
+            if (reportType === 'expenses') {
+                const responseBreakdown = response.data?.breakdown || [];
+
+                if (!availableCategories.length && responseBreakdown.length) {
+                    setAvailableCategories(responseBreakdown.map(({ key, label }) => ({ key, label })));
+                }
+            }
             toast.success('Report generated successfully');
         } catch (error) {
             console.error('Error generating report:', error);
@@ -272,7 +280,12 @@ const Reports = () => {
                         <div className="flex items-center">
                             <div className="flex-1">
                                 <p className="stat-label">Categories Selected</p>
-                                <p className="stat-value">{selectedCategories.length || availableCategories.length}</p>
+                                <p className="stat-value">
+                                    {selectedCategories.length ||
+                                        reportData?.selectedCategories?.length ||
+                                        reportData?.breakdown?.length ||
+                                        availableCategories.length}
+                                </p>
                                 <p className="text-xs text-gray-500">
                                     {selectedCategories.length ? 'Custom selection' : 'All categories'}
                                 </p>
@@ -349,7 +362,12 @@ const Reports = () => {
                                     <tr>
                                         <th>Period</th>
                                         <th>Total Expenses</th>
-                                        {selectedCategories.map((category) => (
+                                        {(selectedCategories.length
+                                            ? selectedCategories
+                                            : reportData?.selectedCategories?.length
+                                                ? reportData.selectedCategories
+                                                : sortedExpenseBreakdown.map(({ key }) => key)
+                                        ).map((category) => (
                                             <th key={category}>{getCategoryLabel(category)}</th>
                                         ))}
                                     </tr>
@@ -359,7 +377,12 @@ const Reports = () => {
                                         <tr key={month.period} className="table-row">
                                             <td className="table-cell">{month.period}</td>
                                             <td className="table-cell">{formatCurrency(month.total)}</td>
-                                            {selectedCategories.map((category) => (
+                                            {(selectedCategories.length
+                                                ? selectedCategories
+                                                : reportData?.selectedCategories?.length
+                                                    ? reportData.selectedCategories
+                                                    : sortedExpenseBreakdown.map(({ key }) => key)
+                                            ).map((category) => (
                                                 <td key={`${month.period}-${category}`} className="table-cell">
                                                     {formatCurrency(month.categories?.[category] || 0)}
                                                 </td>
