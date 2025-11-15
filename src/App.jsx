@@ -11,6 +11,7 @@ import FinancialRecords from './pages/FinancialRecords';
 import FileUpload from './pages/FileUpload';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import OfflineIndicator from './components/common/OfflineIndicator';
 
 // Context
 import { SocketProvider } from './context/SocketContext';
@@ -70,6 +71,7 @@ function App() {
 
                             {/* Page content */}
                             <main className="flex-1 overflow-y-auto p-6">
+                                <OfflineIndicator />
                                 <Routes>
                                     <Route path="/" element={<Dashboard />} />
                                     <Route path="/dashboard" element={<Dashboard />} />

@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { buildCacheKey, offlineCache } from '../utils/offlineCache';
 
 const ApiContext = createContext();
 
@@ -28,6 +29,31 @@ const api = axios.create({
     },
 });
 
+const isBrowser = typeof window !== 'undefined';
+let offlineToastDisplayed = false;
+
+if (isBrowser) {
+    window.addEventListener('online', () => {
+        offlineToastDisplayed = false;
+    });
+}
+
+const shouldCacheRequest = (config = {}) => {
+    const method = (config.method || 'get').toLowerCase();
+    return method === 'get' && config.responseType !== 'blob';
+};
+
+const notifyOfflineFallback = () => {
+    if (offlineToastDisplayed) return;
+    offlineToastDisplayed = true;
+    toast('Offline mode: showing cached data', {
+        icon: '📦',
+    });
+    setTimeout(() => {
+        offlineToastDisplayed = false;
+    }, 3000);
+};
+
 // Request interceptor
 api.interceptors.request.use(
     (config) => {
@@ -46,9 +72,24 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
     (response) => {
+        if (shouldCacheRequest(response.config)) {
+            const cacheKey = buildCacheKey(response.config);
+            offlineCache.set(cacheKey, response.data);
+        }
+
         return response.data;
     },
     (error) => {
+        const config = error.config;
+        if (shouldCacheRequest(config)) {
+            const cacheKey = buildCacheKey(config);
+            const cachedResponse = offlineCache.get(cacheKey);
+            if (cachedResponse) {
+                notifyOfflineFallback();
+                return cachedResponse;
+            }
+        }
+
         if (error.response) {
             const { status, data } = error.response;
 
@@ -116,6 +157,18 @@ export const ApiProvider = ({ children }) => {
         getConsolidatedReport: (params) => api.get('/reports/consolidated', { params }),
         getComparativeReport: (params) => api.get('/reports/comparative', { params }),
         getOrganizationSummary: (params) => api.get('/reports/organization-summary', { params }),
+        getExpenseCategories: () => api.get('/reports/expenses/categories'),
+        getExpenseBreakdown: (params) => api.get('/reports/expenses/breakdown', { params }),
+        exportConsolidatedReport: (params) =>
+            api.get('/reports/consolidated', {
+                params: { ...params, format: 'excel' },
+                responseType: 'blob'
+            }),
+        exportExpenseBreakdown: (params) =>
+            api.get('/reports/expenses/breakdown', {
+                params: { ...params, format: 'excel' },
+                responseType: 'blob'
+            })
     };
 
     return (
